@@ -1,9 +1,9 @@
 import { Request, Response } from "express";
 import * as asyncHandler from "express-async-handler";
-import Service from "../models/service";
 import registerLog from "../utils/registerLog";
 import { sendErrorResponse } from "../utils/errors";
 import Room from "../models/room";
+import Service from "../models/service";
 
 const getRooms = asyncHandler(async (req: Request, res: Response) => {
   const serviceID = req.service?._id;
@@ -52,10 +52,11 @@ const createRoom = asyncHandler(async (req: Request, res: Response) => {
 
   if (req.images) creationObject.thumbnail = req.images[0];
 
-  const newRoom = (await Room.create(creationObject)).toObject();
-
-  delete newRoom._id;
-  delete newRoom.__v;
+  let newRoom: any = await Room.create(creationObject);
+  newRoom = await Service.populate(newRoom, {
+    path: "service",
+    select: "-_id -__v",
+  });
 
   res.status(201).json(newRoom);
 
@@ -70,6 +71,8 @@ const updateRoom = asyncHandler(async (req: Request, res: Response) => {
   const updateObject: any = {};
   if (name) {
     updateObject.name = name;
+    if (name.length > 25 || name.length < 3)
+      sendErrorResponse(res, 400, "Name should be between 3 and 25 in length");
   }
   if (description) {
     updateObject.description = description;
@@ -93,8 +96,8 @@ const updateRoom = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const deleteRoom = asyncHandler(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const oldRoom = await Room.findOneAndDelete({ id })
+  const { roomID } = req.params;
+  const oldRoom = await Room.findOneAndDelete({ id: roomID })
     .select("-_id -__v")
     .populate("service", "-_id -__v");
   if (!oldRoom) {

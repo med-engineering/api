@@ -59,6 +59,8 @@ const updateService = asyncHandler(async (req: Request, res: Response) => {
     if (!name?.trim()?.length) {
       return sendErrorResponse(res, 404, "Service name is required");
     }
+    if (name.length > 25 || name.length < 3)
+      sendErrorResponse(res, 400, "Name should be between 3 and 25 in length");
     updateObject.name = name;
   }
   if (description) {
